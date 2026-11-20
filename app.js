@@ -4,6 +4,9 @@ const age = $("#age");
 const source = $("#source");
 const query = $("#query");
 const tabs = [...document.querySelectorAll("[data-type]")];
+const consultationTime = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short", timeStyle: "short", timeZone: "America/Manaus",
+});
 let data;
 let error = false;
 
@@ -37,14 +40,17 @@ function jobCard(job) {
 
 function render() {
   const term = normalize(query.value);
+  const words = term ? term.split(/\s+/) : [];
   const type = tabs.find((button) => button.getAttribute("aria-pressed") === "true").dataset.type;
   const years = Number(age.value);
   const filtered = Boolean(term || years || type || source.value);
-  const jobs = (data?.jobs ?? []).filter((job) =>
-    (!type || job.type === type) &&
-    (!source.value || job.source === source.value) &&
-    (!years || (job.age && years >= job.age[0] && years <= job.age[1])) &&
-    normalize(job.title + " " + job.organization).includes(term));
+  const jobs = (data?.jobs ?? []).filter((job) => {
+    const searchable = normalize(job.title + " " + job.organization);
+    return (!type || job.type === type) &&
+      (!source.value || job.source === source.value) &&
+      (!years || (job.age && years >= job.age[0] && years <= job.age[1])) &&
+      words.every((word) => searchable.includes(word));
+  });
 
   $("#jobs").replaceChildren(...jobs.map(jobCard));
   $("#age-note").hidden = !years;
@@ -53,6 +59,7 @@ function render() {
     : jobs.length + (jobs.length === 1 ? " oportunidade" : " oportunidades");
   $("#empty").hidden = pending || jobs.length > 0;
   $("#reset").hidden = !filtered || error;
+  $("#retry").hidden = !error;
   $("#empty-title").textContent = error ? "O catálogo está indisponível"
     : filtered ? "Nenhuma vaga para estes filtros" : "Nenhuma oportunidade disponível no catálogo";
   $("#empty-description").textContent = error ? "Tente novamente ou consulte os canais de vagas abaixo."
@@ -75,23 +82,25 @@ $("#reset").addEventListener("click", () => {
 });
 
 async function load() {
+  data = undefined;
+  error = false;
+  $("#warning").hidden = true;
+  $("#updated").textContent = "";
+  render();
   try {
     const response = await fetch($('meta[name="vagas-api"]').content);
     if (!response.ok) throw new Error("Catálogo indisponível");
     data = await response.json();
-    const dates = data.sources.map((item) => item.checkedAt).filter(Boolean).sort();
-    if (dates.length) {
-      const timestamp = new Intl.DateTimeFormat("pt-BR", {
-        dateStyle: "short", timeStyle: "short", timeZone: "America/Manaus",
-      }).format(new Date(dates.at(-1)));
-      $("#updated").textContent = "Última consulta bem-sucedida: " + timestamp;
-    }
+    $("#updated").textContent = data.sources.map(({ name, checkedAt }) => {
+      const time = checkedAt ? consultationTime.format(new Date(checkedAt)) : "aguardando consulta";
+      return name + " · " + time;
+    }).join(" | ");
     const failed = data.sources.filter((item) => item.problem).map((item) => item.name);
     if (failed.length) {
       const warning = $("#warning");
       warning.hidden = false;
       warning.textContent = "Falha na última consulta: " + failed.join(", ") + ". Confira a disponibilidade no anúncio.";
-      error = dates.length === 0;
+      error = !data.sources.some((item) => item.checkedAt);
     }
   } catch {
     error = true;
@@ -99,4 +108,5 @@ async function load() {
   render();
 }
 
+$("#retry").addEventListener("click", load);
 load();
