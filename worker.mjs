@@ -80,10 +80,10 @@ function parseSine(json) {
   });
 }
 
-function dateInManaus() {
+function dateInManaus(date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Manaus", year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(new Date());
+  }).format(date);
 }
 
 function activeJobs(rows) {
@@ -112,80 +112,52 @@ async function catalog(db) {
   };
 }
 
-async function refresh(db) {
-    const start = new Date().toISOString();
-    const current = await catalog(db);
-    await Promise.all(current.sources.map(async ({ id, checkedAt, problem }) => {
-      if (checkedAt && !problem && Date.now() - Date.parse(checkedAt) < 45 * 60000) return;
-      const source = sources[id];
-      try {
-        const response = await fetch(source.url, { signal: AbortSignal.timeout(16000) });
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        const jobs = source.parse(await response.text());
-        await db.prepare(`INSERT INTO source_snapshots VALUES (?, ?, NULL, ?)
-          ON CONFLICT(source) DO UPDATE SET checked_at=excluded.checked_at, error_at=NULL, jobs=excluded.jobs
-          WHERE excluded.checked_at >= source_snapshots.checked_at`)
-          .bind(id, start, JSON.stringify(jobs)).run();
-      } catch (error) {
-        console.warn(source.name, error.message);
-        await db.prepare(`INSERT INTO source_snapshots VALUES (?, '', ?, '[]')
-          ON CONFLICT(source) DO UPDATE SET error_at=excluded.error_at
-          WHERE excluded.error_at >= source_snapshots.checked_at`).bind(id, start).run();
-      }
-    }));
+async function refresh(db, current) {
+  const now = new Date();
+  const today = dateInManaus(now);
+  const stale = current.sources.filter(({ checkedAt, problem }) =>
+    problem || !checkedAt || dateInManaus(new Date(checkedAt)) !== today);
+  if (!stale.length) return current;
+
+  // The public feed refreshes only from configured sources and claims a global cooldown.
+  const claim = await db.prepare(`INSERT INTO refresh_gate VALUES (1, ?)
+    ON CONFLICT(id) DO UPDATE SET next_attempt=excluded.next_attempt
+    WHERE refresh_gate.next_attempt <= ?`)
+    .bind(now.getTime() + 10 * 60000, now.getTime()).run();
+  if (!claim.meta.changes) return catalog(db);
+
+  const start = now.toISOString();
+  await Promise.all(stale.map(async ({ id }) => {
+    const source = sources[id];
+    try {
+      const response = await fetch(source.url, { signal: AbortSignal.timeout(16000) });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const jobs = source.parse(await response.text());
+      await db.prepare(`INSERT INTO source_snapshots VALUES (?, ?, NULL, ?)
+        ON CONFLICT(source) DO UPDATE SET checked_at=excluded.checked_at, error_at=NULL, jobs=excluded.jobs
+        WHERE excluded.checked_at >= source_snapshots.checked_at`)
+        .bind(id, start, JSON.stringify(jobs)).run();
+    } catch (error) {
+      console.warn(source.name, error.message);
+      await db.prepare(`INSERT INTO source_snapshots VALUES (?, '', ?, '[]')
+        ON CONFLICT(source) DO UPDATE SET error_at=excluded.error_at
+        WHERE excluded.error_at >= source_snapshots.checked_at`).bind(id, start).run();
+    }
+  }));
   return catalog(db);
-}
-
-const refreshTool = {
-  name: "atualizar_catalogo",
-  description: "Consulta Gupy e Prefeitura de Manaus, atualiza o catálogo e lê o resultado salvo.",
-  inputSchema: { type: "object", properties: {}, additionalProperties: false },
-};
-
-async function mcp(request, db) {
-  const body = await request.json();
-  const { id, method, params } = body;
-  let result;
-  if (method === "server/discover") {
-    result = { supportedVersions: ["2026-07-28"], capabilities: { tools: {} } };
-  } else if (method === "initialize") {
-    result = { protocolVersion: params?.protocolVersion, serverInfo: { name: "Primeiro Passo Manaus", version: "1.0.0" }, capabilities: { tools: {} } };
-  } else if (method === "tools/list") {
-    result = { tools: [refreshTool] };
-  } else if (method === "tools/call" && params?.name === refreshTool.name) {
-    const data = await refresh(db);
-    result = {
-      content: [{ type: "text", text: JSON.stringify({ oportunidades: data.jobs.length, fontes: data.sources }) }],
-      isError: data.sources.every((source) => source.problem),
-    };
-  } else if (id === undefined) {
-    return new Response(null, { status: 204 });
-  } else {
-    return Response.json({ jsonrpc: "2.0", id, error: { code: -32601, message: "Método desconhecido" } });
-  }
-  return Response.json({ jsonrpc: "2.0", id, result });
 }
 
 export { ageRange, parseGupy, parseSine, activeJobs };
 
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const path = new URL(request.url).pathname;
     try {
-      if (path === "/mcp" && request.method === "POST") return await mcp(request, env.DB);
       if (path === "/api/atualizar" && request.method === "POST") {
-        // Sites protege esta rota com a política de acesso do portal. Mantenha-a privada.
-        const { jobs, sources } = await refresh(env.DB);
-        return Response.json({ count: jobs.length, sources }, {
-          status: sources.every((source) => source.problem) ? 503 : 200,
-          headers: { "Cache-Control": "no-store" },
-        });
+        return Response.redirect(new URL("/api/vagas", request.url), 303);
       }
       if (path === "/api/vagas" && request.method === "GET") {
-        let data = await catalog(env.DB);
-        const latest = Math.max(...data.sources.map((source) => source.checkedAt ? Date.parse(source.checkedAt) : 0));
-        if (!data.sources.some((source) => source.checkedAt)) data = await refresh(env.DB);
-        else if (Date.now() - latest > 25 * 3600000) ctx.waitUntil(refresh(env.DB));
+        const data = await refresh(env.DB, await catalog(env.DB));
         return Response.json(data, { headers: { "Cache-Control": "no-store" } });
       }
       const asset = assets[path];
