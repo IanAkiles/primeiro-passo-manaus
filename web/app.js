@@ -56,6 +56,7 @@ function render() {
     : jobs.length + (jobs.length === 1 ? " oportunidade" : " oportunidades");
   $("#empty").hidden = pending || jobs.length > 0;
   $("#reset").hidden = !filtered || error;
+  $("#retry").hidden = !error;
   $("#empty-title").textContent = error ? "O catálogo está indisponível"
     : filtered ? "Nenhuma vaga para estes filtros" : "Nenhuma oportunidade disponível no catálogo";
   $("#empty-description").textContent = error ? "Tente novamente ou consulte os canais de vagas abaixo."
@@ -78,6 +79,11 @@ $("#reset").addEventListener("click", () => {
 });
 
 async function load() {
+  data = undefined;
+  error = false;
+  $("#warning").hidden = true;
+  $("#updated").textContent = "";
+  render();
   try {
     const response = await fetch($('meta[name="vagas-api"]').content);
     if (!response.ok) throw new Error("Catálogo indisponível");
@@ -102,4 +108,5 @@ async function load() {
   render();
 }
 
+$("#retry").addEventListener("click", load);
 load();
