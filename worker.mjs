@@ -112,10 +112,7 @@ async function catalog(db) {
   };
 }
 
-let pendingRefresh;
-function refresh(db) {
-  if (pendingRefresh) return pendingRefresh;
-  pendingRefresh = (async () => {
+async function refresh(db) {
     const start = new Date().toISOString();
     const current = await catalog(db);
     await Promise.all(current.sources.map(async ({ id, checkedAt, problem }) => {
@@ -136,9 +133,7 @@ function refresh(db) {
           WHERE excluded.error_at >= source_snapshots.checked_at`).bind(id, start).run();
       }
     }));
-    return catalog(db);
-  })().finally(() => { pendingRefresh = undefined; });
-  return pendingRefresh;
+  return catalog(db);
 }
 
 const refreshTool = {
@@ -178,9 +173,17 @@ export default {
     const path = new URL(request.url).pathname;
     try {
       if (path === "/mcp" && request.method === "POST") return await mcp(request, env.DB);
+      if (path === "/api/atualizar" && request.method === "POST") {
+        // Sites protege esta rota com a política de acesso do portal. Mantenha-a privada.
+        const { jobs, sources } = await refresh(env.DB);
+        return Response.json({ count: jobs.length, sources }, {
+          status: sources.every((source) => source.problem) ? 503 : 200,
+          headers: { "Cache-Control": "no-store" },
+        });
+      }
       if (path === "/api/vagas" && request.method === "GET") {
         let data = await catalog(env.DB);
-        const latest = Math.max(...data.sources.map((source) => Date.parse(source.checkedAt || 0) || 0));
+        const latest = Math.max(...data.sources.map((source) => source.checkedAt ? Date.parse(source.checkedAt) : 0));
         if (!data.sources.some((source) => source.checkedAt)) data = await refresh(env.DB);
         else if (Date.now() - latest > 25 * 3600000) ctx.waitUntil(refresh(env.DB));
         return Response.json(data, { headers: { "Cache-Control": "no-store" } });
