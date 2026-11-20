@@ -37,14 +37,17 @@ function jobCard(job) {
 
 function render() {
   const term = normalize(query.value);
+  const words = term ? term.split(/\s+/) : [];
   const type = tabs.find((button) => button.getAttribute("aria-pressed") === "true").dataset.type;
   const years = Number(age.value);
   const filtered = Boolean(term || years || type || source.value);
-  const jobs = (data?.jobs ?? []).filter((job) =>
-    (!type || job.type === type) &&
-    (!source.value || job.source === source.value) &&
-    (!years || (job.age && years >= job.age[0] && years <= job.age[1])) &&
-    normalize(job.title + " " + job.organization).includes(term));
+  const jobs = (data?.jobs ?? []).filter((job) => {
+    const searchable = normalize(job.title + " " + job.organization);
+    return (!type || job.type === type) &&
+      (!source.value || job.source === source.value) &&
+      (!years || (job.age && years >= job.age[0] && years <= job.age[1])) &&
+      words.every((word) => searchable.includes(word));
+  });
 
   $("#jobs").replaceChildren(...jobs.map(jobCard));
   $("#age-note").hidden = !years;
