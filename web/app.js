@@ -4,6 +4,9 @@ const age = $("#age");
 const source = $("#source");
 const query = $("#query");
 const tabs = [...document.querySelectorAll("[data-type]")];
+const consultationTime = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short", timeStyle: "short", timeZone: "America/Manaus",
+});
 let data;
 let error = false;
 
@@ -88,19 +91,16 @@ async function load() {
     const response = await fetch($('meta[name="vagas-api"]').content);
     if (!response.ok) throw new Error("Catálogo indisponível");
     data = await response.json();
-    const dates = data.sources.map((item) => item.checkedAt).filter(Boolean).sort();
-    if (dates.length) {
-      const timestamp = new Intl.DateTimeFormat("pt-BR", {
-        dateStyle: "short", timeStyle: "short", timeZone: "America/Manaus",
-      }).format(new Date(dates.at(-1)));
-      $("#updated").textContent = "Última consulta bem-sucedida: " + timestamp;
-    }
+    $("#updated").textContent = data.sources.map(({ name, checkedAt }) => {
+      const time = checkedAt ? consultationTime.format(new Date(checkedAt)) : "aguardando consulta";
+      return name + " · " + time;
+    }).join(" | ");
     const failed = data.sources.filter((item) => item.problem).map((item) => item.name);
     if (failed.length) {
       const warning = $("#warning");
       warning.hidden = false;
       warning.textContent = "Falha na última consulta: " + failed.join(", ") + ". Confira a disponibilidade no anúncio.";
-      error = dates.length === 0;
+      error = !data.sources.some((item) => item.checkedAt);
     }
   } catch {
     error = true;
