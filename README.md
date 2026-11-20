@@ -2,6 +2,8 @@
 
 Portal de vagas de aprendizagem e primeiro emprego em Manaus. A seleção dá preferência a anúncios originais com localização e prazo verificáveis. O filtro de idade usa apenas faixas publicadas, e cada candidatura segue para a fonte.
 
+[Abrir o portal hospedado](https://primeiro-passo-manaus.akilesian424.chatgpt.site). O acesso ao portal depende das permissões configuradas no Sites. O GitHub hospeda o código-fonte.
+
 ## Rodar localmente
 
 Use Node.js 24 ou superior. Execute `npm start` e visite `http://127.0.0.1:4173`. A primeira consulta preenche a base SQLite local. Execute `npm test` para verificar os parsers e o filtro de validade.

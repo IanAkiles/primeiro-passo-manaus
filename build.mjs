@@ -1,15 +1,18 @@
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 
 const assets = {};
+const binaryTypes = new Set(["image/webp", "image/x-icon"]);
 for (const [path, type] of Object.entries({
   "/": "text/html; charset=utf-8",
   "/styles.css": "text/css; charset=utf-8",
   "/app.js": "text/javascript; charset=utf-8",
   "/hero.webp": "image/webp",
+  "/favicon.ico": "image/x-icon",
 })) {
   try {
     const body = await readFile(path === "/" ? "web/index.html" : "web" + path);
-    assets[path] = { type, body: body.toString(path === "/hero.webp" ? "base64" : "utf8") };
+    const binary = binaryTypes.has(type);
+    assets[path] = { type, binary, body: body.toString(binary ? "base64" : "utf8") };
   } catch (error) {
     if (path !== "/hero.webp" || error.code !== "ENOENT") throw error;
   }

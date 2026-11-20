@@ -190,7 +190,7 @@ export default {
       }
       const asset = assets[path];
       if (asset && (request.method === "GET" || request.method === "HEAD")) {
-        const body = path === "/hero.webp" ? Uint8Array.from(atob(asset.body), (c) => c.charCodeAt(0)) : asset.body;
+        const body = asset.binary ? Uint8Array.from(atob(asset.body), (c) => c.charCodeAt(0)) : asset.body;
         return new Response(request.method === "HEAD" ? null : body, {
           headers: { "Content-Type": asset.type, "X-Content-Type-Options": "nosniff" },
         });
