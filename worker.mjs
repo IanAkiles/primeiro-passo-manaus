@@ -158,7 +158,9 @@ export default {
       }
       if (path === "/api/vagas" && request.method === "GET") {
         const data = await refresh(env.DB, await catalog(env.DB));
-        return Response.json(data, { headers: { "Cache-Control": "no-store" } });
+        return Response.json(data, {
+          headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" },
+        });
       }
       const asset = assets[path];
       if (asset && (request.method === "GET" || request.method === "HEAD")) {

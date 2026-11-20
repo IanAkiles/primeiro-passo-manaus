@@ -76,7 +76,7 @@ $("#reset").addEventListener("click", () => {
 
 async function load() {
   try {
-    const response = await fetch("/api/vagas");
+    const response = await fetch($('meta[name="vagas-api"]').content);
     if (!response.ok) throw new Error("Catálogo indisponível");
     data = await response.json();
     const dates = data.sources.map((item) => item.checkedAt).filter(Boolean).sort();

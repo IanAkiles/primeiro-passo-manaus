@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "build:pages": "node build-pages.mjs",
     "start": "node build.mjs && node local.mjs",
     "test": "node --test"
   }
