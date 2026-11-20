@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Encontre oportunidades de jovem aprendiz e primeiro emprego para adolescentes em Manaus.">
+  <meta name="theme-color" content="#eff2e9">
+  <meta name="vagas-api" content="https://primeiro-passo-manaus.akilesian424.chatgpt.site/api/vagas">
+  <title>Primeiro Passo Manaus | Vagas para jovens</title>
+  <link rel="icon" href="./favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#vagas">Pular para as vagas</a>
+  <header class="top">
+    <div class="wrap bar">
+      <a class="brand" href="./" aria-label="Primeiro Passo Manaus, início"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>primeiro passo<span class="period">.</span><small>MANAUS</small></span></a>
+      <nav aria-label="Principal"><a href="#vagas">Explorar vagas</a><a href="#fontes">Fontes</a></nav>
+      <span class="city"><span aria-hidden="true"></span> Manaus, AM</span>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="headline">
+      <div class="intro">
+        <h1 id="headline">Seu primeiro<br>emprego começa<br><em>em Manaus<span>.</span></em></h1>
+        <p>Encontre vagas de jovem aprendiz e oportunidades que aceitam adolescentes. Candidate-se pelo anúncio original.</p>
+        <a class="primary" href="#vagas">Encontrar minha vaga</a>
+      </div>
+      <div class="hero-picture" role="img" aria-label="Dois jovens conversando ao ar livre"></div>
+    </section>
+    <section id="vagas" class="catalog" aria-labelledby="heading">
+      <div class="section-head"><h2 id="heading">Vagas em Manaus</h2><p id="updated" role="status"></p></div>
+      <form id="filters" class="filters" role="search">
+        <div class="field search">
+          <label for="query">Buscar vaga ou empresa</label>
+          <input type="search" id="query" placeholder="Ex.: administrativo, loja, Logística">
+        </div>
+        <div class="field">
+          <label for="age">Sua idade</label>
+          <select id="age"><option value="">Todas as idades</option></select>
+        </div>
+        <div class="field">
+          <label for="source">Fonte</label>
+          <select id="source"><option value="">Todas as fontes</option><option value="gupy">Gupy</option><option value="sine">Sine Manaus</option></select>
+        </div>
+      </form>
+      <div class="lower"><div class="tabs" aria-label="Tipo de oportunidade">
+        <button type="button" data-type="" aria-pressed="true">Todas</button>
+        <button type="button" data-type="Aprendizagem" aria-pressed="false">Aprendizagem</button>
+        <button type="button" data-type="Primeiro emprego" aria-pressed="false">Primeiro emprego</button>
+        <button type="button" data-type="Banco de talentos" aria-pressed="false">Banco de talentos</button>
+      </div><p id="total" role="status">Buscando vagas…</p></div>
+      <p class="age-note" id="age-note" hidden>Este filtro mostra vagas cuja faixa etária aparece no anúncio.</p>
+      <p id="warning" class="notice" hidden></p>
+      <div id="jobs" class="cards"></div>
+      <div id="empty" class="empty" hidden><h3 id="empty-title"></h3><p id="empty-description"></p><button type="button" id="reset">Limpar filtros</button></div>
+    </section>
+    <section id="fontes" class="sources" aria-labelledby="sources-title">
+      <div><h2 id="sources-title">Onde mais procurar</h2><p>Consulte os canais locais e confira os requisitos de cada seleção.</p></div>
+      <div class="source-links">
+        <a href="https://www.manaus.am.gov.br/semtepi/" target="_blank" rel="noopener">Sine Manaus</a>
+        <a href="https://portal.gupy.io/job-search/term%3DJovem%20aprendiz%26state%3DAmazonas%26city%5B%5D%3DManaus" target="_blank" rel="noopener">Gupy</a>
+        <a href="https://portal.ciee.org.br/quero-uma-vaga/jovem-aprendiz/" target="_blank" rel="noopener">CIEE</a>
+        <a href="https://www.espro.org.br/jovem-aprendiz/" target="_blank" rel="noopener">Espro</a>
+      </div>
+    </section>
+  </main>
+  <footer class="wrap footer"><span>Primeiro Passo Manaus</span><a href="https://www.gov.br/trabalho-e-emprego/pt-br/assuntos/inspecao-do-trabalho/aprendizagem-profissional">Sobre aprendizagem profissional</a></footer>
+  <template id="job-template">
+    <article class="job"><div class="job-top"><span class="badge"></span><span class="job-source"></span></div><h3></h3><p class="company"></p>
+      <ul class="details"><li class="location">Manaus, AM</li><li class="job-age"></li><li class="deadline"></li></ul>
+      <div class="job-bottom"><a target="_blank" rel="noopener">Ver anúncio original</a><span class="date"></span></div>
+    </article>
+  </template>
+</body>
+</html>
