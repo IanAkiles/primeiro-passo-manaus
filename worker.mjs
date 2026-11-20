@@ -94,7 +94,9 @@ function activeJobs(rows) {
     .sort((a, b) => String(b.published ?? "").localeCompare(String(a.published ?? "")));
   const seen = new Set();
   return jobs.filter((job) => {
-    const key = [job.source, job.organization, job.title, job.type].join("|").toLowerCase().replace(/\s+/g, " ");
+    const key = job.source === "gupy" && job.id
+      ? "gupy:" + job.id
+      : [job.source, job.organization, job.title, job.type].join("|").toLowerCase().replace(/\s+/g, " ");
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

@@ -25,3 +25,12 @@ test("remove vagas vencidas, vagas comuns e duplicatas do mesmo anúncio", () =>
   const content = [{ jobs: JSON.stringify([...rows, ...rows, { ...rows[0], deadline: "2000-01-01" }]) }];
   assert.equal(activeJobs(content).length, 1);
 });
+
+test("mantém anúncios da Gupy com o mesmo título e IDs diferentes", () => {
+  const job = { source: "gupy", organization: "Empresa", title: "Jovem Aprendiz",
+    type: "Aprendizagem", deadline: "2099-12-31" };
+  const first = { ...job, id: "gupy-1" };
+  const second = { ...job, id: "gupy-2" };
+  const rows = [{ jobs: JSON.stringify([first, second, first]) }];
+  assert.deepEqual(activeJobs(rows).map(({ id }) => id), ["gupy-1", "gupy-2"]);
+});
