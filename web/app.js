@@ -10,7 +10,7 @@ const consultationTime = new Intl.DateTimeFormat("pt-BR", {
 let data;
 let error = false;
 
-for (let years = 14; years <= 23; years++) {
+for (let years = 14; years <= 24; years++) {
   age.add(new Option(years + " anos", years));
 }
 
@@ -88,19 +88,26 @@ async function load() {
   $("#updated").textContent = "";
   render();
   try {
-    const response = await fetch($('meta[name="vagas-api"]').content);
+    const response = await fetch($('meta[name="vagas-api"]').content, {
+      signal: AbortSignal.timeout(25000),
+    });
     if (!response.ok) throw new Error("Catálogo indisponível");
-    data = await response.json();
-    $("#updated").textContent = data.sources.map(({ name, checkedAt }) => {
+    const result = await response.json();
+    if (!Array.isArray(result?.jobs) || !Array.isArray(result?.sources)) {
+      throw new Error("Formato do catálogo inválido");
+    }
+    const lastChecks = result.sources.map(({ name, checkedAt }) => {
       const time = checkedAt ? consultationTime.format(new Date(checkedAt)) : "aguardando consulta";
       return name + " · " + time;
     }).join(" | ");
-    const failed = data.sources.filter((item) => item.problem).map((item) => item.name);
+    const failed = result.sources.filter((item) => item.problem).map((item) => item.name);
+    data = result;
+    $("#updated").textContent = lastChecks;
     if (failed.length) {
       const warning = $("#warning");
       warning.hidden = false;
       warning.textContent = "Falha na última consulta: " + failed.join(", ") + ". Confira a disponibilidade no anúncio.";
-      error = !data.sources.some((item) => item.checkedAt);
+      error = !result.sources.some((item) => item.checkedAt);
     }
   } catch {
     error = true;
